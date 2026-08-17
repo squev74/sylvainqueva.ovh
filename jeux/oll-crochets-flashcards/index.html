@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards — CFOP par crochets (OLL)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12141f;
+    --card-back: #1c2033;
+    --card-back-edge: #262b45;
+    --ink: #f7f5f0;
+    --ink-dim: #a9acc4;
+    --gold: #f4b942;
+    --gold-dim: #6b581f;
+    --teal: #6dd3c7;
+    --coral: #e2574c;
+    --line: rgba(247,245,240,0.08);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(circle at 15% -10%, rgba(244,185,66,0.08), transparent 45%),
+      radial-gradient(circle at 100% 10%, rgba(109,211,199,0.06), transparent 40%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 28px 18px 50px;
+  }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); text-decoration: none;
+    margin-bottom: 18px; transition: color .15s;
+  }
+  .back-link:hover{ color: var(--gold); }
+
+  .wrap{ max-width: 640px; margin: 0 auto; }
+
+  header{ margin-bottom: 20px; }
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background: var(--gold-dim); display:inline-block; }
+  h1{
+    font-family: 'Fraunces', serif; font-weight: 600;
+    font-size: clamp(24px, 6vw, 32px); margin: 10px 0 6px;
+  }
+  h1 em{ color: var(--gold); font-style: italic; font-weight: 500; }
+  .sub{ color: var(--ink-dim); font-size: 13.5px; line-height: 1.5; }
+
+  .modes{ display:flex; gap:8px; margin: 18px 0 14px; flex-wrap: wrap; }
+  .mode-btn{
+    flex: 1; min-width: 130px;
+    font-family:'Inter', sans-serif; font-size: 12px; font-weight:600;
+    background: var(--card-back); border: 1px solid var(--line); color: var(--ink-dim);
+    padding: 10px 8px; border-radius: 10px; cursor: pointer; text-align:center;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .mode-btn.active{ border-color: var(--gold); color: var(--gold); background: rgba(244,185,66,0.08); }
+
+  .filters{ display:flex; gap:6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size: 10.5px;
+    padding: 6px 11px; border-radius: 20px; border: 1px solid var(--line);
+    color: var(--ink-dim); cursor:pointer; transition: all .15s;
+  }
+  .chip.active{ border-color: var(--teal); color: var(--teal); background: rgba(109,211,199,0.08); }
+
+  .progress-row{
+    display:flex; align-items:center; gap:12px; margin-bottom: 16px;
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-dim);
+  }
+  .progress-bar{ flex:1; height: 5px; border-radius: 4px; background: var(--card-back-edge); overflow:hidden; }
+  .progress-fill{ height:100%; background: var(--gold); width: 0%; transition: width .3s ease; }
+
+  .stage{ perspective: 1200px; margin-bottom: 18px; }
+  .card{
+    position:relative; width:100%; min-height: 300px;
+    transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2,.8,.2,1); cursor:pointer;
+  }
+  .card.flipped{ transform: rotateY(180deg); }
+  .face{
+    position:absolute; inset:0; backface-visibility: hidden; border-radius: 18px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 22px; border: 1px solid var(--line);
+  }
+  .face-front{ background: linear-gradient(160deg, #191d30, #14172a); }
+  .face-front .cat{
+    font-family:'IBM Plex Mono', monospace; font-size: 11px; letter-spacing:0.12em;
+    text-transform:uppercase; color: var(--teal); margin-bottom: 8px;
+  }
+  .face-front .num{
+    font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-dim); margin-bottom: 6px;
+  }
+  .face-front .name{
+    font-family:'Fraunces', serif; font-weight:600; font-style: italic;
+    font-size: clamp(22px, 6vw, 30px); color: var(--gold);
+  }
+  .face-front .alg{
+    margin-top: 14px; font-family:'IBM Plex Mono', monospace; font-size: 13.5px;
+    color: var(--ink); letter-spacing: 0.02em; line-height: 1.6; word-break: break-word;
+  }
+  .face-front .hint{ margin-top: 12px; font-size: 12px; color: var(--ink-dim); }
+
+  .face-back{
+    transform: rotateY(180deg);
+    background: linear-gradient(160deg, rgba(244,185,66,0.14), rgba(109,211,199,0.08));
+    border-color: var(--gold);
+  }
+  .face-back .tag{
+    font-family:'IBM Plex Mono', monospace; font-size: 11px; letter-spacing:0.12em;
+    text-transform:uppercase; color: var(--gold); margin-bottom: 10px;
+  }
+  .face-back .alg{
+    font-family:'IBM Plex Mono', monospace; font-size: 13px; color: var(--ink-dim);
+    margin-bottom: 12px; line-height: 1.6; word-break: break-word;
+  }
+  .face-back .phrase{
+    font-family:'Fraunces', serif; font-style: italic; font-size: clamp(14px, 3.8vw, 17px);
+    color: var(--teal); line-height: 1.5;
+  }
+
+  .flip-hint{
+    text-align:center; font-size: 12px; color: var(--ink-dim);
+    margin-bottom: 20px; font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .answers{ display:flex; gap:10px; opacity: 0; pointer-events:none; transition: opacity .2s; }
+  .answers.show{ opacity:1; pointer-events:auto; }
+  .ans-btn{
+    flex:1; padding: 14px 10px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card-back); color: var(--ink); font-family:'Inter', sans-serif;
+    font-weight:600; font-size: 14px; cursor:pointer; transition: transform .1s, border-color .15s;
+  }
+  .ans-btn:hover{ transform: translateY(-1px); }
+  .ans-btn.again{ border-color: var(--coral); color: var(--coral); }
+  .ans-btn.good{ border-color: var(--teal); color: var(--teal); }
+
+  .cube-link{
+    display: inline-block; margin-top: 12px; padding: 8px 16px;
+    border: 1px solid var(--teal); border-radius: 20px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight:600;
+    color: var(--teal); text-decoration: none; transition: background .15s;
+  }
+  .cube-link:hover{ background: rgba(109,211,199,0.1); }
+
+  .summary{
+    display:none; text-align:center; padding: 32px 20px;
+    background: var(--card-back); border: 1px solid var(--gold); border-radius: 16px;
+  }
+  .summary.show{ display:block; }
+  .summary h2{ font-family:'Fraunces', serif; font-size: 24px; color: var(--gold); margin: 0 0 8px; }
+  .summary p{ color: var(--ink-dim); font-size: 14px; margin: 4px 0 0; }
+  .summary .big{
+    font-family:'IBM Plex Mono', monospace; font-size: 40px; font-weight:600;
+    color: var(--teal); margin: 14px 0;
+  }
+  button.primary{
+    font-family:'Inter', sans-serif; font-size: 13px; font-weight:600;
+    background: var(--gold); border:none; color:#1c1503;
+    padding: 12px 22px; border-radius: 10px; cursor:pointer; margin-top: 18px;
+  }
+
+  footer{
+    margin-top: 34px; font-size: 12px; color: var(--ink-dim);
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  footer a{ color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a href="../../index.html" class="back-link">← Retour aux jeux</a>
+
+  <header>
+    <div class="eyebrow">Flashcards — CFOP par crochets</div>
+    <h1>Les 57 <em>OLL</em>, en phrases</h1>
+    <p class="sub">Même système que les PLL : Requin=R, Loup=L, Soldat=U, Dauphin=D, Fée=F, Bison=B, Mouton=M, avance/recule/saute. Aucun mouvement S. Filtre par famille de motif pour progresser par blocs.</p>
+  </header>
+
+  <div class="modes">
+    <div class="mode-btn active" data-mode="a2p">Algo → Phrase</div>
+    <div class="mode-btn" data-mode="n2a">Nom → Algo</div>
+    <div class="mode-btn" data-mode="mix">Mélangé</div>
+  </div>
+
+  <div class="filters" id="filters">
+    <div class="chip active" data-cat="all">Tous (57)</div>
+    <div class="chip" data-cat="dot">Point / Carré (10)</div>
+    <div class="chip" data-cat="fish">Poisson / Éclair / Cavalier (14)</div>
+    <div class="chip" data-cat="cross">Croix — OCLL (7)</div>
+    <div class="chip" data-cat="awk">Awkward / P / C / W (12)</div>
+    <div class="chip" data-cat="tli">T / L / I (12)</div>
+    <div class="chip" data-cat="edges">Bords orientés (2)</div>
+  </div>
+
+  <div class="progress-row">
+    <span id="progress-label">0 / 57</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span id="score-label">✓ 0</span>
+  </div>
+
+  <div id="game-area">
+    <div class="stage">
+      <div class="card" id="card">
+        <div class="face face-front" id="face-front"></div>
+        <div class="face face-back" id="face-back"></div>
+      </div>
+    </div>
+    <div class="flip-hint" id="flip-hint">Tape la carte pour révéler la réponse</div>
+    <div class="answers" id="answers">
+      <div class="ans-btn again" id="btn-again">À revoir</div>
+      <div class="ans-btn good" id="btn-good">Je savais ✓</div>
+    </div>
+  </div>
+
+  <div class="summary" id="summary">
+    <h2>Session terminée</h2>
+    <div class="big" id="summary-score">0/57</div>
+    <p id="summary-text"></p>
+    <button class="primary" id="restart">Nouvelle session</button>
+  </div>
+
+  <footer>Les 57 algorithmes n'utilisent jamais le mouvement S. Certains utilisent des tranches larges (r, f, l — « en groupe ») ou une rotation d'ensemble (y — jouée par un personnage « Régisseur »). Le bouton « Voir en 3D » ouvre <a href="https://alg.cubing.net/">alg.cubing.net</a> avec le cube déjà positionné dans le motif du cas. Sources : Speedsolving the Cube (Harris), speedsolving.com wiki, jperm.net/algs/oll.</footer>
+</div>
+
+<script>
+const FACE_NAMES = {
+  R: "Requin", L: "Loup", U: "Soldat", D: "Dauphin",
+  F: "Fée", B: "Bison", M: "Mouton", E: "Éléphant", S: "Serpent",
+  X: "Cadreur", Y: "Régisseur", Z: "Metteur en scène"
+};
+
+function tokenize(algString){
+  return algString.match(/[A-Za-z][2']?/g) || [];
+}
+
+function toDisplay(algString){
+  return tokenize(algString).join(' ');
+}
+
+function buildPhrase(algString){
+  const tokens = tokenize(algString);
+  const parts = tokens.map(tok => {
+    const m = tok.match(/^([A-Za-z])(2|')?$/);
+    if(!m) return tok;
+    const rawLetter = m[1];
+    const mod = m[2] || '';
+    const isLower = rawLetter === rawLetter.toLowerCase() && rawLetter !== rawLetter.toUpperCase();
+    const key = rawLetter.toUpperCase();
+    const name = FACE_NAMES[key] || key;
+    const action = mod === '2' ? 'saute' : (mod === "'" ? 'recule' : 'avance');
+    let phrase = `${name} ${action}`;
+    if(isLower && !['X','Y','Z'].includes(key)) phrase += ' en groupe';
+    return phrase;
+  });
+  let sentence = parts.join(', ');
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1) + '.';
+}
+
+function invertAlg(algString){
+  const tokens = tokenize(algString);
+  return tokens.reverse().map(tok => {
+    const m = tok.match(/^([A-Za-z])(2|')?$/);
+    if(!m) return tok;
+    const letter = m[1];
+    const mod = m[2] || '';
+    if(mod === "'") return letter;
+    if(mod === '2') return tok;
+    return letter + "'";
+  }).join(' ');
+}
+
+function toUrlNotation(algString){
+  return tokenize(algString).join('_').replace(/'/g, '-');
+}
+
+function cubeViewerUrl(algString){
+  const setup = invertAlg(algString);
+  const params = new URLSearchParams({
+    puzzle: '3x3x3',
+    stage: 'OLL',
+    setup: toUrlNotation(setup),
+    alg: toUrlNotation(algString)
+  });
+  return `https://alg.cubing.net/?${params.toString()}`;
+}
+
+const OLL = [
+  {n:1, name:"Point (Bunny)", grp:"dot", hint:"Aucun jaune visible, motif lapin", alg:"RU2R2FRF'U2R'FRF'"},
+  {n:2, name:"Point (Zamboni)", grp:"dot", hint:"Aucun jaune, motif symétrique avant/arrière", alg:"FRUR'U'F'fRUR'U'f'"},
+  {n:3, name:"Point", grp:"dot", hint:"Aucun jaune, motif asymétrique", alg:"fRUR'U'f'U'FRUR'U'F'"},
+  {n:4, name:"Point (miroir de 3)", grp:"dot", hint:"Aucun jaune, image miroir du cas 3", alg:"fRUR'U'f'UFRUR'U'F'"},
+  {n:5, name:"Carré (Slash)", grp:"dot", hint:"Carré 2×1 jaune, coin avant-droit", alg:"r'U2RUR'Ur"},
+  {n:6, name:"Carré (Anti-Slash)", grp:"dot", hint:"Carré 2×1 jaune, coin avant-gauche (miroir de 5)", alg:"rU2R'U'RU'r'"},
+  {n:7, name:"Éclair (Poisson)", grp:"fish", hint:"Motif poisson-éclair", alg:"rUR'URU2r'"},
+  {n:8, name:"Éclair (miroir)", grp:"fish", hint:"Motif poisson-éclair, miroir du cas 7", alg:"r'U'RU'R'U2r"},
+  {n:9, name:"Poisson (Awkward)", grp:"fish", hint:"Poisson à l'orientation maladroite", alg:"RUR'U'R'FR2UR'U'F'"},
+  {n:10, name:"Poisson (P-Shape)", grp:"fish", hint:"Poisson en forme de P", alg:"RUR'UR'FRF'RU2R'"},
+  {n:11, name:"Petit éclair", grp:"fish", hint:"Petit motif en éclair", alg:"r'R2UR'URU2R'UM'"},
+  {n:12, name:"Petit éclair (miroir)", grp:"fish", hint:"Miroir du cas 11", alg:"M'R'U'RU'R'U2RU'Rr'"},
+  {n:13, name:"Cavalier", grp:"fish", hint:"Motif en L décalé façon cavalier d'échecs", alg:"FURU'R2F'RURU'R'"},
+  {n:14, name:"Cavalier (miroir)", grp:"fish", hint:"Miroir du cas 13", alg:"R'FRUR'F'RFU'F'"},
+  {n:15, name:"Cavalier (variante)", grp:"fish", hint:"Autre variante du motif cavalier", alg:"l'U'lL'U'LUl'Ul"},
+  {n:16, name:"Cavalier (variante miroir)", grp:"fish", hint:"Miroir du cas 15", alg:"rUr'RUR'U'rU'r'"},
+
+  {n:17, name:"Coins diagonaux", grp:"dot", hint:"Deux coins diagonaux orientés, aucune arête", alg:"RUR'UR'FRF'U2R'FRF'"},
+  {n:18, name:"Couronne (Y)", grp:"dot", hint:"Motif en Y, rotation d'ensemble nécessaire", alg:"FRUR'Uy'R'U2R'FRF'"},
+  {n:19, name:"Poisson maladroit", grp:"dot", hint:"Petit motif en croix incomplète", alg:"MURUR'U'M'R'FRF'"},
+  {n:20, name:"Double croix (X)", grp:"dot", hint:"Large I, seul le centre est résolu", alg:"MURUR'U'M2URU'r'"},
+
+  {n:21, name:"Croix — H (double Sune)", grp:"cross", hint:"Croix jaune faite, motif en H symétrique", alg:"RUR'URU'R'URU2R'"},
+  {n:22, name:"Croix — Pi (Bruno)", grp:"cross", hint:"Croix faite, motif Pi", alg:"RU2R2U'R2U'R2U2R"},
+  {n:23, name:"Croix — Phares", grp:"cross", hint:"Croix faite, deux coins adjacents avec « phares »", alg:"R2DR'U2RD'R'U2R'"},
+  {n:24, name:"Croix — Caméléon", grp:"cross", hint:"Croix faite, motif caméléon avant-droit", alg:"rUR'U'r'FRF'"},
+  {n:25, name:"Croix — Nœud papillon", grp:"cross", hint:"Croix faite, deux coins diagonaux orientés", alg:"F'rUR'U'r'FR"},
+  {n:26, name:"Anti-Sune", grp:"cross", hint:"Croix faite, un seul coin orienté (arrière-gauche)", alg:"RU2R'U'RU'R'"},
+  {n:27, name:"Sune", grp:"cross", hint:"Croix faite, un seul coin orienté (avant-gauche)", alg:"RUR'URU2R'"},
+
+  {n:28, name:"Coins tous orientés (Stealth)", grp:"edges", hint:"Coins résolus, deux arêtes opposées à retourner", alg:"M'U'MU2M'U'M"},
+  {n:29, name:"Awkward", grp:"awk", hint:"Motif maladroit, combinaison coin + arêtes", alg:"RUR'U'RU'R'F'U'FRUR'"},
+  {n:30, name:"Awkward (miroir)", grp:"awk", hint:"Miroir du cas 29", alg:"FR'FR2U'R'U'RUR'F2"},
+  {n:31, name:"P", grp:"awk", hint:"Motif en P, un coin orienté", alg:"R'U'FURU'R'F'R"},
+  {n:32, name:"P (miroir)", grp:"awk", hint:"Miroir du cas 31", alg:"LUF'U'L'ULFL'"},
+  {n:33, name:"T (Marteau)", grp:"tli", hint:"Motif en T, deux coins adjacents orientés", alg:"RUR'U'R'FRF'"},
+  {n:34, name:"C", grp:"awk", hint:"Motif en C, deux coins adjacents orientés", alg:"RUR2U'R'FRURU'F'"},
+  {n:35, name:"Poisson carré", grp:"fish", hint:"Poisson à symétrie carrée", alg:"RU2R2FRF'RU2R'"},
+  {n:36, name:"W (Wario)", grp:"awk", hint:"Motif en W", alg:"L'U'LU'L'ULULF'L'F"},
+  {n:37, name:"Poisson monté", grp:"fish", hint:"Poisson avec l'aileron en haut à gauche", alg:"FR'F'RURU'R'"},
+  {n:38, name:"W (Mario, miroir)", grp:"awk", hint:"Miroir du cas 36", alg:"RUR'URU'R'U'R'FRF'"},
+  {n:39, name:"Grand éclair", grp:"fish", hint:"Grand motif en éclair", alg:"LF'L'U'LUFU'L'"},
+  {n:40, name:"Grand éclair (miroir)", grp:"fish", hint:"Miroir du cas 39", alg:"R'FRUR'U'F'UR"},
+  {n:41, name:"Sune + Awkward", grp:"awk", hint:"Combinaison Sune et motif maladroit", alg:"RUR'URU2R'FRUR'U'F'"},
+  {n:42, name:"Anti-Sune + Awkward", grp:"awk", hint:"Combinaison Anti-Sune et motif maladroit", alg:"R'U'RU'R'U2RFRUR'U'F'"},
+  {n:43, name:"P (gauche)", grp:"tli", hint:"Motif en P, barre à gauche, aucun coin orienté", alg:"f'L'U'LUf"},
+  {n:44, name:"P (droite)", grp:"tli", hint:"Motif en P, barre à droite, aucun coin orienté", alg:"fRUR'U'f'"},
+  {n:45, name:"T (inversé)", grp:"tli", hint:"T inversé, aucun coin orienté — le plus utilisé", alg:"FRUR'U'F'"},
+  {n:46, name:"C (aucun coin)", grp:"awk", hint:"Motif en C, aucun coin orienté", alg:"R'U'R'FRF'UR"},
+  {n:47, name:"Grand L (Awkward)", grp:"tli", hint:"Grand L, deux coins adjacents orientés", alg:"F'L'U'LUL'U'LUF"},
+  {n:48, name:"Grand L (miroir)", grp:"tli", hint:"Miroir du cas 47", alg:"FRUR'U'RUR'U'F'"},
+  {n:49, name:"L (diagonal)", grp:"tli", hint:"L avec deux coins diagonaux orientés", alg:"R'FR'F'R2U2yR'FRF'"},
+  {n:50, name:"L (Slash)", grp:"tli", hint:"L avec motif en biais", alg:"R'FR2B'R2F'R2BR'"},
+  {n:51, name:"I (Barre)", grp:"tli", hint:"Barre horizontale, aucun coin orienté", alg:"fRUR'U'RUR'U'f'"},
+  {n:52, name:"I (Rice Cooker)", grp:"tli", hint:"Barre avec un coin orienté", alg:"RUR'URd'RU'R'F'"},
+  {n:53, name:"L (Cavalier)", grp:"tli", hint:"L avec motif cavalier, deux coins diagonaux", alg:"l'U'LU'L'ULU'L'U2l"},
+  {n:54, name:"L (Cavalier, miroir)", grp:"tli", hint:"Miroir du cas 53", alg:"rUR'URU'R'URU2r'"},
+  {n:55, name:"Ligne (Highway)", grp:"tli", hint:"Ligne horizontale, deux coins diagonaux orientés", alg:"RU2R2U'RU'R'U2FRF'"},
+  {n:56, name:"Ligne (Streetlights)", grp:"tli", hint:"Ligne verticale, deux coins diagonaux orientés", alg:"FRUR'U'RF'rUR'U'r'"},
+  {n:57, name:"Arêtes toutes orientées (H)", grp:"edges", hint:"Symétrique au cas 28, deux arêtes à retourner", alg:"RUR'U'M'URU'r'"},
+];
+
+OLL.forEach(o => { o.phrase = buildPhrase(o.alg); o.algDisplay = toDisplay(o.alg); });
+
+const GROUP_LABELS = {
+  dot: "Point / Carré", fish: "Poisson / Éclair / Cavalier",
+  cross: "Croix — OCLL", awk: "Awkward / P / C / W",
+  tli: "T / L / I", edges: "Bords orientés"
+};
+
+let mode = 'a2p';
+let activeCat = 'all';
+let deck = [];
+let idx = 0;
+let score = 0;
+let revealed = false;
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getPool(){
+  if(activeCat === 'all') return OLL;
+  return OLL.filter(o => o.grp === activeCat);
+}
+
+function buildDeck(){
+  let base = shuffle(getPool());
+  deck = base.map(o => {
+    let direction = mode;
+    if(mode === 'mix'){ direction = Math.random() < 0.5 ? 'a2p' : 'n2a'; }
+    return { ...o, direction };
+  });
+  idx = 0;
+  score = 0;
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('progress-label').textContent = `${Math.min(idx, deck.length)} / ${deck.length}`;
+  document.getElementById('score-label').textContent = `✓ ${score}`;
+  document.getElementById('progress-fill').style.width = deck.length ? `${(idx/deck.length)*100}%` : '0%';
+}
+
+function renderCard(){
+  if(idx >= deck.length){ finishSession(); return; }
+  const item = deck[idx];
+  const card = document.getElementById('card');
+  card.classList.remove('flipped');
+  revealed = false;
+  document.getElementById('answers').classList.remove('show');
+  document.getElementById('flip-hint').style.display = 'block';
+
+  const front = document.getElementById('face-front');
+  const back = document.getElementById('face-back');
+  const viewerTag = `<a class="cube-link" href="${cubeViewerUrl(item.alg)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🧊 Voir en 3D ↗</a>`;
+
+  if(item.direction === 'a2p'){
+    front.innerHTML = `<div class="cat">${GROUP_LABELS[item.grp]}</div><div class="num">OLL ${item.n}</div><div class="alg">${item.algDisplay}</div><div class="hint">Construis la phrase-crochet</div>`;
+    back.innerHTML = `<div class="tag">${item.name} — OLL ${item.n}</div><div class="phrase">${item.phrase}</div>${viewerTag}`;
+  } else {
+    front.innerHTML = `<div class="cat">${GROUP_LABELS[item.grp]}</div><div class="num">OLL ${item.n}</div><div class="name">${item.name}</div><div class="hint">${item.hint}</div>${viewerTag}`;
+    back.innerHTML = `<div class="tag">Algorithme</div><div class="alg">${item.algDisplay}</div><div class="phrase">${item.phrase}</div>`;
+  }
+  updateStats();
+}
+
+document.getElementById('card').addEventListener('click', () => {
+  if(revealed) return;
+  revealed = true;
+  document.getElementById('card').classList.add('flipped');
+  document.getElementById('flip-hint').style.display = 'none';
+  document.getElementById('answers').classList.add('show');
+});
+
+document.getElementById('btn-good').addEventListener('click', () => { score++; idx++; renderCard(); });
+document.getElementById('btn-again').addEventListener('click', () => {
+  deck.push(deck[idx]);
+  idx++;
+  renderCard();
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+    document.getElementById('summary').classList.remove('show');
+    document.getElementById('game-area').style.display = 'block';
+    buildDeck();
+    renderCard();
+  });
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeCat = chip.dataset.cat;
+    document.getElementById('summary').classList.remove('show');
+    document.getElementById('game-area').style.display = 'block';
+    buildDeck();
+    renderCard();
+  });
+});
+
+function finishSession(){
+  document.getElementById('game-area').style.display = 'none';
+  const summary = document.getElementById('summary');
+  summary.classList.add('show');
+  const total = deck.length;
+  document.getElementById('summary-score').textContent = `${score}/${total}`;
+  const pct = total ? Math.round((score/total)*100) : 0;
+  let msg = "Continue, la répétition fait tout le travail.";
+  if(pct >= 90) msg = "Cette famille d'OLL est bien ancrée.";
+  else if(pct >= 70) msg = "Bonne base, encore une ou deux sessions pour verrouiller.";
+  document.getElementById('summary-text').textContent = msg;
+}
+
+document.getElementById('restart').addEventListener('click', () => {
+  document.getElementById('summary').classList.remove('show');
+  document.getElementById('game-area').style.display = 'block';
+  buildDeck();
+  renderCard();
+});
+
+buildDeck();
+renderCard();
+</script>
+</body>
+</html>
