@@ -211,6 +211,14 @@
   .ans-btn.again{ border-color: var(--coral); color: var(--coral); }
   .ans-btn.good{ border-color: var(--teal); color: var(--teal); }
 
+  .back-link{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); text-decoration: none;
+    margin-bottom: 18px; transition: color .15s;
+  }
+  .back-link:hover{ color: var(--gold); }
+  
   /* Summary */
   .summary{
     display:none;
@@ -248,7 +256,7 @@
 </head>
 <body>
 <div class="wrap">
-
+  <a href="../../index.html" class="back-link">← Retour aux jeux</a>
   <header>
     <div class="eyebrow">Flashcards — sens libre</div>
     <h1>Les <em>crochets</em>, dans les deux sens</h1>
