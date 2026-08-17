@@ -89,6 +89,40 @@ body{
   .grid{ grid-template-columns: 1fr; }
 }
 
+/* Chapters */
+.chapter{
+  margin-bottom: 42px;
+}
+
+.chapter-head{
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.chapter-num{
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--gold-dim);
+  letter-spacing: 0.08em;
+}
+
+.chapter-title{
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--gold);
+  margin: 0;
+}
+
+.chapter-line{
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
 .card{
   display: flex;
   flex-direction: column;
@@ -161,3 +195,4 @@ body{
   border-radius: 4px;
   border: 1px solid var(--line);
 }
+
