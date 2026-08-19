@@ -1,1 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur — Décompte par famille</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12141f;
+    --card-back: #1c2033;
+    --card-back-edge: #262b45;
+    --ink: #f7f5f0;
+    --ink-dim: #a9acc4;
+    --gold: #f4b942;
+    --gold-dim: #6b581f;
+    --teal: #6dd3c7;
+    --coral: #e2574c;
+    --line: rgba(247,245,240,0.08);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(circle at 15% -10%, rgba(244,185,66,0.08), transparent 45%),
+      radial-gradient(circle at 100% 10%, rgba(109,211,199,0.06), transparent 40%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 28px 18px 50px;
+  }
+  .back-link{
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); text-decoration: none;
+    margin-bottom: 18px; transition: color .15s;
+  }
+  .back-link:hover{ color: var(--gold); }
+
+  .wrap{ max-width: 560px; margin: 0 auto; }
+
+  header{ margin-bottom: 20px; }
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background: var(--gold-dim); display:inline-block; }
+  h1{
+    font-family: 'Fraunces', serif; font-weight: 600;
+    font-size: clamp(24px, 6vw, 32px); margin: 10px 0 6px;
+  }
+  h1 em{ color: var(--gold); font-style: italic; font-weight: 500; }
+  .sub{ color: var(--ink-dim); font-size: 13.5px; line-height: 1.5; }
+
+  /* Setup */
+  .panel{
+    background: var(--card-back); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px; margin-bottom: 16px;
+  }
+  .panel-label{
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim);
+    margin-bottom: 10px;
+  }
+  .chip-row{ display:flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip-row:last-child{ margin-bottom: 0; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size: 12px;
+    padding: 9px 14px; border-radius: 20px; border: 1px solid var(--line);
+    color: var(--ink-dim); cursor:pointer; transition: all .15s;
+  }
+  .chip.active{ border-color: var(--gold); color: var(--gold); background: rgba(244,185,66,0.08); }
+
+  button.primary{
+    width: 100%;
+    font-family:'Inter', sans-serif; font-size: 14px; font-weight:600;
+    background: var(--gold); border:none; color:#1c1503;
+    padding: 14px; border-radius: 12px; cursor:pointer; margin-top: 6px;
+  }
+  button.ghost{
+    font-family:'Inter', sans-serif; font-size: 13px; font-weight:600;
+    background: transparent; border: 1px solid var(--line); color: var(--ink);
+    padding: 12px 18px; border-radius: 12px; cursor:pointer; width: 100%;
+  }
+  button.ghost:hover{ border-color: var(--gold); color: var(--gold); }
+
+  /* Game */
+  #game{ display:none; }
+  .status-row{
+    display:flex; justify-content: space-between; align-items:center;
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-dim);
+    margin-bottom: 14px;
+  }
+  .status-row .acc{ color: var(--teal); }
+
+  .trick-stage{
+    background: var(--card-back); border: 1px solid var(--line);
+    border-radius: 18px; padding: 30px 20px; margin-bottom: 16px;
+    min-height: 160px; display:flex; align-items:center; justify-content:center;
+  }
+  .cards-row{ display:flex; gap: 10px; flex-wrap: wrap; justify-content:center; }
+  .playing-card{
+    width: 56px; height: 78px; border-radius: 8px; background: #f7f5f0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size: 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+  .playing-card .suit{ font-size: 20px; margin-top: 2px; }
+  .playing-card.black{ color: #1c1f2e; }
+  .playing-card.red{ color: #c0392b; }
+
+  .hidden-msg{
+    font-family:'IBM Plex Mono', monospace; font-size: 13px; color: var(--ink-dim);
+    text-align:center;
+  }
+  .hidden-msg .big{
+    font-family:'Fraunces', serif; font-style:italic; font-size: 20px;
+    color: var(--gold); display:block; margin-bottom: 8px;
+  }
+
+  .action-row{ display:flex; gap: 10px; }
+
+  /* Quiz */
+  #quiz{ display:none; }
+  .quiz-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+  }
+  .quiz-field{
+    background: var(--card-back); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px;
+  }
+  .quiz-field.correct{ border-color: var(--teal); }
+  .quiz-field.wrong{ border-color: var(--coral); }
+  .quiz-field label{
+    display:flex; align-items:center; gap: 6px;
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-dim);
+    margin-bottom: 8px;
+  }
+  .quiz-field input{
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--ink); font-family:'IBM Plex Mono', monospace;
+    font-size: 20px; text-align:center; padding: 8px; font-weight:600;
+  }
+  .quiz-field input:focus{ outline: none; border-color: var(--gold); }
+  .quiz-field .answer-note{
+    font-size: 11px; color: var(--ink-dim); margin-top: 6px; text-align:center;
+  }
+  .quiz-field.correct .answer-note{ color: var(--teal); }
+  .quiz-field.wrong .answer-note{ color: var(--coral); }
+
+  /* Summary */
+  #summary{
+    display:none; text-align:center; padding: 32px 20px;
+    background: var(--card-back); border: 1px solid var(--gold); border-radius: 16px;
+  }
+  #summary h2{ font-family:'Fraunces', serif; font-size: 24px; color: var(--gold); margin: 0 0 8px; }
+  #summary p{ color: var(--ink-dim); font-size: 14px; margin: 4px 0 0; }
+  #summary .big{
+    font-family:'IBM Plex Mono', monospace; font-size: 40px; font-weight:600;
+    color: var(--teal); margin: 14px 0;
+  }
+
+  footer{
+    margin-top: 34px; font-size: 12px; color: var(--ink-dim);
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a href="../../index.html" class="back-link">← Retour aux jeux</a>
+
+  <header>
+    <div class="eyebrow">Entraînement — décompte de plis</div>
+    <h1>Combien reste-t-<em>il</em> ?</h1>
+    <p class="sub">Les plis défilent. Maintiens mentalement le compte restant des 4 familles — pas d'affichage à l'écran. Le jeu t'interroge régulièrement pour vérifier.</p>
+  </header>
+
+  <div id="setup">
+    <div class="panel">
+      <div class="panel-label">Jeu de cartes</div>
+      <div class="chip-row" id="deck-chips">
+        <div class="chip active" data-val="32">Belote (32, 8/famille)</div>
+        <div class="chip" data-val="52">Classique (52, 13/famille)</div>
+      </div>
+
+      <div class="panel-label">Nombre de joueurs (cartes par pli)</div>
+      <div class="chip-row" id="player-chips">
+        <div class="chip" data-val="2">2</div>
+        <div class="chip active" data-val="4">4</div>
+      </div>
+
+      <div class="panel-label">Affichage des cartes</div>
+      <div class="chip-row" id="speed-chips">
+        <div class="chip" data-val="manual">Manuel</div>
+        <div class="chip active" data-val="3000">3 secondes</div>
+        <div class="chip" data-val="2000">2 secondes</div>
+        <div class="chip" data-val="1000">1 seconde</div>
+      </div>
+
+      <div class="panel-label">Fréquence du quiz</div>
+      <div class="chip-row" id="quiz-chips">
+        <div class="chip" data-val="1">Chaque pli</div>
+        <div class="chip active" data-val="2">Tous les 2 plis</div>
+        <div class="chip" data-val="3">Tous les 3 plis</div>
+        <div class="chip" data-val="end">Fin de manche</div>
+      </div>
+    </div>
+
+    <button class="primary" id="start-btn">Commencer la manche</button>
+  </div>
+
+  <div id="game">
+    <div class="status-row">
+      <span id="trick-label">Pli 1/8</span>
+      <span class="acc" id="acc-label">Précision : —</span>
+    </div>
+    <div class="trick-stage" id="trick-stage"></div>
+    <div class="action-row" id="action-row"></div>
+  </div>
+
+  <div id="quiz">
+    <div class="status-row">
+      <span>Décompte — combien reste-t-il de chaque famille ?</span>
+    </div>
+    <div class="quiz-grid" id="quiz-grid"></div>
+    <div class="action-row" id="quiz-action-row"></div>
+  </div>
+
+  <div id="summary">
+    <h2>Manche terminée</h2>
+    <div class="big" id="summary-score">—</div>
+    <p id="summary-text"></p>
+    <button class="primary" id="restart-btn" style="margin-top:20px;">Nouvelle manche</button>
+  </div>
+
+  <footer>Le but n'est pas de retenir chaque carte individuellement, mais de mettre à jour 4 compteurs (un par famille) à chaque pli, d'un seul coup d'œil groupé. La somme des 4 compteurs doit toujours correspondre au nombre de cartes encore en jeu — utilise ça comme auto-vérification.</footer>
+</div>
+
+<script>
+const SUITS = [
+  { key:'S', label:'Pique',   symbol:'♠', color:'black' },
+  { key:'H', label:'Cœur',    symbol:'♥', color:'red' },
+  { key:'D', label:'Carreau', symbol:'♦', color:'red' },
+  { key:'C', label:'Trèfle',  symbol:'♣', color:'black' },
+];
+const VALUES_32 = ['7','8','9','10','V','D','R','A'];
+const VALUES_52 = ['2','3','4','5','6','7','8','9','10','V','D','R','A'];
+
+let settings = { deck: 32, players: 4, speed: 3000, quizFreq: 2 };
+
+document.querySelectorAll('#deck-chips .chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('#deck-chips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); settings.deck = parseInt(c.dataset.val);
+}));
+document.querySelectorAll('#player-chips .chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('#player-chips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); settings.players = parseInt(c.dataset.val);
+}));
+document.querySelectorAll('#speed-chips .chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('#speed-chips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); settings.speed = c.dataset.val === 'manual' ? 'manual' : parseInt(c.dataset.val);
+}));
+document.querySelectorAll('#quiz-chips .chip').forEach(c => c.addEventListener('click', () => {
+  document.querySelectorAll('#quiz-chips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); settings.quizFreq = c.dataset.val === 'end' ? 'end' : parseInt(c.dataset.val);
+}));
+
+let deck = [];
+let tricks = [];
+let trickIndex = 0;
+let remaining = {};
+let initialPerSuit = 0;
+let quizzesAsked = 0;
+let quizzesCorrectFields = 0;
+let quizzesTotalFields = 0;
+let timerHandle = null;
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildDeckAndTricks(){
+  const values = settings.deck === 32 ? VALUES_32 : VALUES_52;
+  let cards = [];
+  SUITS.forEach(s => values.forEach(v => cards.push({ suit: s.key, value: v })));
+  cards = shuffle(cards);
+  initialPerSuit = values.length;
+  remaining = { S: initialPerSuit, H: initialPerSuit, D: initialPerSuit, C: initialPerSuit };
+
+  tricks = [];
+  for(let i = 0; i < cards.length; i += settings.players){
+    const chunk = cards.slice(i, i + settings.players);
+    if(chunk.length === settings.players) tricks.push(chunk);
+  }
+}
+
+function suitInfo(key){ return SUITS.find(s => s.key === key); }
+
+function startGame(){
+  buildDeckAndTricks();
+  trickIndex = 0;
+  quizzesAsked = 0;
+  quizzesCorrectFields = 0;
+  quizzesTotalFields = 0;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('quiz').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  showTrick();
+}
+
+function updateStatus(){
+  document.getElementById('trick-label').textContent = `Pli ${trickIndex + 1}/${tricks.length}`;
+  const accTxt = quizzesTotalFields > 0
+    ? `Précision : ${Math.round((quizzesCorrectFields/quizzesTotalFields)*100)}%`
+    : 'Précision : —';
+  document.getElementById('acc-label').textContent = accTxt;
+}
+
+function showTrick(){
+  updateStatus();
+  const trick = tricks[trickIndex];
+  const stage = document.getElementById('trick-stage');
+  const cardsHtml = trick.map(c => {
+    const info = suitInfo(c.suit);
+    return `<div class="playing-card ${info.color}"><span>${c.value}</span><span class="suit">${info.symbol}</span></div>`;
+  }).join('');
+  stage.innerHTML = `<div class="cards-row">${cardsHtml}</div>`;
+
+  const actionRow = document.getElementById('action-row');
+  actionRow.innerHTML = '';
+
+  if(settings.speed === 'manual'){
+    const btn = document.createElement('button');
+    btn.className = 'ghost';
+    btn.textContent = "J'ai mis à jour mes compteurs → suivant";
+    btn.onclick = () => hideTrickAndAdvance();
+    actionRow.appendChild(btn);
+  } else {
+    clearTimeout(timerHandle);
+    timerHandle = setTimeout(() => hideTrickAndAdvance(), settings.speed);
+  }
+}
+
+function hideTrickAndAdvance(){
+  // Appliquer le décompte réel (caché au joueur)
+  const trick = tricks[trickIndex];
+  trick.forEach(c => { remaining[c.suit]--; });
+
+  const stage = document.getElementById('trick-stage');
+  stage.innerHTML = `<div class="hidden-msg"><span class="big">Mets à jour tes 4 compteurs</span>Pli ${trickIndex+1} — ${tricks[trickIndex].length} cartes retirées</div>`;
+  document.getElementById('action-row').innerHTML = '';
+
+  const isLastTrick = trickIndex === tricks.length - 1;
+  const shouldQuiz =
+    settings.quizFreq === 'end' ? isLastTrick :
+    ((trickIndex + 1) % settings.quizFreq === 0) || isLastTrick;
+
+  setTimeout(() => {
+    if(shouldQuiz){
+      showQuiz(isLastTrick);
+    } else {
+      trickIndex++;
+      showTrick();
+    }
+  }, 500);
+}
+
+function showQuiz(isLastTrick){
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('quiz').style.display = 'block';
+  quizzesAsked++;
+
+  const grid = document.getElementById('quiz-grid');
+  grid.innerHTML = SUITS.map(s => `
+    <div class="quiz-field" id="qf-${s.key}">
+      <label>${s.symbol} ${s.label}</label>
+      <input type="number" min="0" max="${initialPerSuit}" id="qi-${s.key}" placeholder="?">
+    </div>
+  `).join('');
+
+  const actionRow = document.getElementById('quiz-action-row');
+  actionRow.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'primary';
+  btn.textContent = 'Valider';
+  btn.onclick = () => gradeQuiz(isLastTrick);
+  actionRow.appendChild(btn);
+
+  document.getElementById('qi-S').focus();
+}
+
+function gradeQuiz(isLastTrick){
+  SUITS.forEach(s => {
+    const input = document.getElementById(`qi-${s.key}`);
+    const field = document.getElementById(`qf-${s.key}`);
+    const val = parseInt(input.value);
+    const correct = remaining[s.key];
+    quizzesTotalFields++;
+    if(val === correct){
+      quizzesCorrectFields++;
+      field.classList.add('correct');
+      field.querySelector('.answer-note')?.remove();
+      const note = document.createElement('div');
+      note.className = 'answer-note';
+      note.textContent = 'Correct';
+      field.appendChild(note);
+    } else {
+      field.classList.add('wrong');
+      const note = document.createElement('div');
+      note.className = 'answer-note';
+      note.textContent = `Correct : ${correct}`;
+      field.appendChild(note);
+    }
+    input.disabled = true;
+  });
+
+  const actionRow = document.getElementById('quiz-action-row');
+  actionRow.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'ghost';
+  btn.textContent = isLastTrick ? 'Voir le résumé' : 'Continuer';
+  btn.onclick = () => {
+    if(isLastTrick){
+      showSummary();
+    } else {
+      trickIndex++;
+      document.getElementById('quiz').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      showTrick();
+    }
+  };
+  actionRow.appendChild(btn);
+}
+
+function showSummary(){
+  document.getElementById('quiz').style.display = 'none';
+  document.getElementById('summary').style.display = 'block';
+  const pct = quizzesTotalFields > 0 ? Math.round((quizzesCorrectFields/quizzesTotalFields)*100) : 0;
+  document.getElementById('summary-score').textContent = `${pct}%`;
+  let msg = `${quizzesCorrectFields}/${quizzesTotalFields} compteurs corrects sur ${quizzesAsked} vérifications, ${tricks.length} plis joués.`;
+  if(pct >= 90) msg += " Décompte solide — augmente la vitesse d'affichage pour progresser.";
+  else if(pct >= 70) msg += " Bonne base, continue à cette vitesse encore quelques manches.";
+  else msg += " Repasse en mode Manuel ou ralentis l'affichage pour consolider.";
+  document.getElementById('summary-text').textContent = msg;
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', () => {
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('setup').style.display = 'block';
+});
+</script>
+</body>
+</html>
 
